@@ -41,9 +41,13 @@ var (
 )
 
 func testChild(t *testing.T, key, ref_key string, i uint32) {
-	child_key, err := StringChild(key, i)
+	w, err := NewDefaultBtcWalletGenerator(false)
 	if err != nil {
-		t.Errorf("%s should have been nil", err.Error())
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	child_key, err := w.StringChild(key, i)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
 	}
 	if child_key != ref_key {
 		t.Errorf("\n%s\nsupposed to be\n%s", child_key, ref_key)
@@ -51,16 +55,28 @@ func testChild(t *testing.T, key, ref_key string, i uint32) {
 }
 
 func testMasterKey(t *testing.T, seed []byte, ref_key string) {
-	masterprv := MasterKey(seed).String()
+	w, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	mprv, err := w.MasterKey(seed)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	masterprv := mprv.String()
 	if masterprv != ref_key {
 		t.Errorf("\n%s\nsupposed to be\n%s", masterprv, ref_key)
 	}
 }
 
 func testPub(t *testing.T, prv, ref_pub string) {
-	w, err := StringWallet(prv)
+	gen, err := NewDefaultBtcWalletGenerator(false)
 	if err != nil {
-		t.Errorf("%s should have been nil", err.Error())
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	w, err := gen.StringWallet(prv)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
 	}
 	pub := w.Pub().String()
 	if pub != ref_pub {
@@ -140,16 +156,20 @@ func TestChildPrv(t *testing.T) {
 }
 
 func TestSerialize(t *testing.T) {
-	w, err := StringWallet(m_prv2)
+	gen, err := NewDefaultBtcWalletGenerator(false)
 	if err != nil {
-		t.Errorf("%s should have been nil", err.Error())
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	w, err := gen.StringWallet(m_prv2)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
 	}
 	if m_prv2 != w.String() {
 		t.Errorf("private key not de/reserializing properly")
 	}
-	w, err = StringWallet(m_pub2)
+	w, err = gen.StringWallet(m_pub2)
 	if err != nil {
-		t.Errorf("%s should have been nil", err.Error())
+		t.Fatalf("%s should have been nil", err.Error())
 	}
 	if m_pub2 != w.String() {
 		t.Errorf("public key not de/reserializing properly")
@@ -160,7 +180,11 @@ func TestSerialize(t *testing.T) {
 // Public key: 04CBCAA9C98C877A26977D00825C956A238E8DDDFBD322CCE4F74B0B5BD6ACE4A77BD3305D363C26F82C1E41C667E4B3561C06C60A2104D2B548E6DD059056AA51
 // Expected address: 1AEg9dFEw29kMgaN4BNHALu7AzX5XUfzSU
 func TestAddress(t *testing.T) {
-	addr, err := StringAddress(m_pub2)
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	addr, err := gen.StringAddress(m_pub2)
 	if err != nil {
 		t.Errorf("%s should have been nil", err.Error())
 	}
@@ -171,10 +195,14 @@ func TestAddress(t *testing.T) {
 }
 
 func TestStringCheck(t *testing.T) {
-	if err := StringCheck(m_pub2); err != nil {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+	if err := gen.StringCheck(m_pub2); err != nil {
 		t.Errorf("%s should have been nil", err.Error())
 	}
-	if err := StringCheck(m_prv2); err != nil {
+	if err := gen.StringCheck(m_prv2); err != nil {
 		t.Errorf("%s should have been nil", err.Error())
 	}
 }
@@ -185,13 +213,29 @@ func TestIssue6(t *testing.T) {
             t.Errorf("StringChild should not panic")
         }
     }()
-    StringChild(issue_6_arg0, issue_6_arg1)
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+    gen.StringChild(issue_6_arg0, issue_6_arg1)
 }
 
 func TestIssue11(t *testing.T) {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+
     seed, _ := GenSeed(128)
-    wallet_1 := MasterKey(seed)
-    wallet_2 := MasterKey(seed)
+    wallet_1, err := gen.MasterKey(seed)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
+
+    wallet_2, err := gen.MasterKey(seed)
+	if err != nil {
+		t.Fatalf("%s should have been nil", err.Error())
+	}
 
     wallet_1.Serialize()
 
@@ -203,34 +247,59 @@ func TestIssue11(t *testing.T) {
 // benchmarks
 
 func BenchmarkStringChildPub(b *testing.B) {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		b.Fatalf("%s should have been nil", err.Error())
+	}
+
 	for i := 0; i < b.N; i++ {
-		StringChild(m_pub2, 0)
+		gen.StringChild(m_pub2, 0)
 	}
 }
 
 func BenchmarkStringChildPrv(b *testing.B) {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		b.Fatalf("%s should have been nil", err.Error())
+	}
+
 	var a uint32
 	a = 0x80000000
 	for i := 0; i < b.N; i++ {
-		StringChild(m_prv1, a)
+		gen.StringChild(m_prv1, a)
 	}
 }
 
 func BenchmarkStringPubString(b *testing.B) {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		b.Fatalf("%s should have been nil", err.Error())
+	}
+
 	for i := 0; i < b.N; i++ {
-		w, _ := StringWallet(m_prv2)
+		w, _ := gen.StringWallet(m_prv2)
 		w.Pub().String()
 	}
 }
 
 func BenchmarkStringAddress(b *testing.B) {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		b.Fatalf("%s should have been nil", err.Error())
+	}
+
 	for i := 0; i < b.N; i++ {
-		StringAddress(m_pub2)
+		gen.StringAddress(m_pub2)
 	}
 }
 
 func BenchmarkStringCheck(b *testing.B) {
+	gen, err := NewDefaultBtcWalletGenerator(false)
+	if err != nil {
+		b.Fatalf("%s should have been nil", err.Error())
+	}
+
 	for i := 0; i < b.N; i++ {
-		StringCheck(m_pub2)
+		gen.StringCheck(m_pub2)
 	}
 }
