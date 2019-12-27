@@ -116,9 +116,9 @@ func NewDefaultLtcWalletGenerator(test bool) (*WalletGenerator, error) {
 		})
 	}
 	return NewWalletGenerator(WalletGenPrefixes{
-		PubkeyHash:    TestLtcPubkeyHash,
-		PublicPrefix:  TestLtcPublicPrefix,
-		PrivatePrefix: TestLtcPrivatePrefix,
+		PubkeyHash:    LtcPubkeyHash,
+		PublicPrefix:  LtcPublicPrefix,
+		PrivatePrefix: LtcPrivatePrefix,
 		Key:           DefaultLtcKey,
 	})
 }
